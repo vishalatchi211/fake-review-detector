@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Review Detector</title>
+    <style>
+        :root {
+            --bg-1: #edf5ff;
+            --bg-2: #dce9ff;
+            --ink: #1b2435;
+            --muted: #5f6e83;
+            --line: #d7e0f5;
+            --panel: rgba(255, 255, 255, 0.86);
+            --panel-strong: rgba(255, 255, 255, 0.97);
+            --accent-1: #2563eb;
+            --accent-2: #7c3aed;
+            --accent-3: #06b6d4;
+            --accent-4: #f59e0b;
+            --real-bg: #ecfdf3;
+            --real-border: #31b96c;
+            --real-text: #187645;
+            --fake-bg: #fff1f1;
+            --fake-border: #ff5f5f;
+            --fake-text: #c62828;
+            --error-bg: #fff4f4;
+            --error-border: #f19999;
+            --error-text: #b42318;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(124, 58, 237, 0.16), transparent 30%),
+                radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.12), transparent 24%),
+                linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 28px;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            z-index: 0;
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        body::before {
+            left: -120px;
+            top: 120px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 66%);
+        }
+
+        body::after {
+            right: -120px;
+            bottom: 60px;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.18), transparent 66%);
+        }
+
+        .shell {
+            width: min(920px, 100%);
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 28px;
+            box-shadow: 0 24px 80px rgba(44, 62, 110, 0.18);
+            backdrop-filter: blur(14px);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent 22%),
+                linear-gradient(180deg, transparent 0%, rgba(124, 58, 237, 0.03) 100%);
+        }
+
+        .hero {
+            position: relative;
+            padding: 42px 42px 28px;
+            background:
+                linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.08)),
+                var(--panel-strong);
+            border-bottom: 1px solid rgba(215, 222, 240, 0.85);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            right: -40px;
+            top: -40px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.18), transparent 62%);
+            pointer-events: none;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            left: 42px;
+            bottom: 0;
+            width: 146px;
+            height: 5px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-3), var(--accent-4));
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            color: var(--accent-1);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+            box-shadow: 0 10px 22px rgba(60, 85, 150, 0.08);
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+        }
+
+        h1 {
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            line-height: 1.03;
+            letter-spacing: -0.04em;
+            margin-bottom: 2px;
+            text-wrap: balance;
+        }
+
+        .subtitle {
+            max-width: 720px;
+            color: var(--muted);
+            font-size: 1.06rem;
+            line-height: 1.7;
+        }
+
+        .content {
+            padding: 34px 42px 40px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 40%),
+                rgba(255, 255, 255, 0.18);
+        }
+
+        .form-card {
+            background: rgba(255, 255, 255, 0.84);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 18px 44px rgba(54, 74, 123, 0.08);
+            position: relative;
+        }
+
+        .form-card::after {
+            content: "";
+            position: absolute;
+            right: 18px;
+            top: 18px;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.08), transparent 68%);
+            pointer-events: none;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        label {
+            font-size: 1.18rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 158px;
+            resize: vertical;
+            border-radius: 18px;
+            border: 1.5px solid #c7d4f4;
+            background: rgba(248, 250, 255, 0.92);
+            padding: 18px 20px;
+            font: inherit;
+            font-size: 1.06rem;
+            line-height: 1.7;
+            color: var(--ink);
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        textarea::placeholder {
+            color: #8a95a7;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-1);
+            box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        button {
+            min-width: 260px;
+            border: none;
+            border-radius: 18px;
+            padding: 17px 28px;
+            color: white;
+            font: inherit;
+            font-size: 1.12rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            box-shadow: 0 16px 32px rgba(80, 70, 180, 0.22);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 38px rgba(80, 70, 180, 0.28);
+        }
+
+        button:hover::after {
+            transform: translateX(100%);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .error {
+            margin-top: 18px;
+            border-radius: 18px;
+            border: 1px solid var(--error-border);
+            background: var(--error-bg);
+            color: var(--error-text);
+            padding: 16px 18px;
+            font-size: 0.98rem;
+            line-height: 1.6;
+        }
+
+        .result {
+            margin-top: 28px;
+            border-radius: 24px;
+            padding: 28px;
+            border: 1.5px solid;
+            box-shadow: 0 12px 32px rgba(44, 62, 110, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fake {
+            background: var(--fake-bg);
+            border-color: var(--fake-border);
+        }
+
+        .real {
+            background: var(--real-bg);
+            border-color: var(--real-border);
+        }
+
+        .result::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.5));
+            opacity: 0.8;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .result h2 {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            letter-spacing: -0.03em;
+        }
+
+        .fake h2 {
+            color: var(--fake-text);
+        }
+
+        .real h2 {
+            color: var(--real-text);
+        }
+
+        .status-chip {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            color: var(--ink);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        .metric {
+            background: rgba(255, 255, 255, 0.84);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 18px;
+            padding: 18px 14px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(44, 62, 110, 0.05);
+        }
+
+        .metric-label {
+            font-size: 0.86rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .metric-value {
+            font-size: 1.38rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .reasons {
+            margin-top: 20px;
+            padding: 18px 18px 8px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px dashed rgba(0, 0, 0, 0.08);
+            color: #374151;
+            line-height: 1.7;
+        }
+
+        .reasons strong {
+            display: block;
+            font-size: 0.96rem;
+            margin-bottom: 8px;
+            color: var(--ink);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .reason-line {
+            margin-bottom: 6px;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            text-align: center;
+            color: #7b8798;
+            font-size: 0.9rem;
+            letter-spacing: 0.02em;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 14px;
+                align-items: flex-start;
+            }
+
+            .hero,
+            .content {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+
+            .form-card,
+            .result {
+                padding: 18px;
+            }
+
+            .result-header {
+                flex-direction: column;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="eyebrow">Tanglish Review Screening</div>
+            <h1>Fake Review Detector</h1>
+            <p class="subtitle">Enter a product review to check if it's genuine or fake</p>
+        </section>
+
+        <section class="content">
+            <div class="form-card">
+                <form method="POST">
+                    <div class="label-row">
+                        <label for="review">Enter Review Text</label>
+                        <span class="hint">Paste or type a Tanglish review</span>
+                    </div>
+                    <textarea name="review" id="review" placeholder="Example: Na 5 days use panninen, battery okay but camera average..." required>{{ review }}</textarea>
+                    <div class="button-row">
+                        <button type="submit">Check Review</button>
+                    </div>
+                </form>
+
+                {% if error %}
+                <div class="error">{{ error }}</div>
+                {% endif %}
+            </div>
+
+            {% if prediction is not none %}
+            <div class="result {% if prediction|lower == 'fake' %}fake{% else %}real{% endif %}">
+                <div class="result-header">
+                    <div>
+                        <h2>{% if prediction|lower == 'fake' %}Fake Review{% else %}Genuine Review{% endif %}</h2>
+                    </div>
+                    <div class="status-chip">{% if prediction|lower == 'fake' %}Flagged{% else %}Accepted{% endif %}</div>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Confidence</div>
+                        <div class="metric-value">{{ confidence if confidence is not none else probability }}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Fake Score</div>
+                        <div class="metric-value">{{ fake_probability }}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Real Score</div>
+                        <div class="metric-value">{{ real_probability }}%</div>
+                    </div>
+                </div>
+
+                {% if reasons %}
+                <div class="reasons">
+                    <strong>Why The Model Responded This Way</strong>
+                    {% for reason in reasons %}
+                    <div class="reason-line">- {{ reason }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</body>
+</html>
