@@ -132,22 +132,30 @@ def mean_pool(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> 
 
 
 def load_models():
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"MuRIL model folder not found: {MODEL_PATH}")
+    # Try loading local MuRIL model
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(str(MODEL_PATH), local_files_only=True)
+        encoder = AutoModel.from_pretrained(str(MODEL_PATH), local_files_only=True)
+        print("✅ Loaded MuRIL from local folder")
+    except:
+        print("⚠️ Local model not found. Downloading from HuggingFace...")
+        tokenizer = AutoTokenizer.from_pretrained("google/muril-base-cased")
+        encoder = AutoModel.from_pretrained("google/muril-base-cased")
+
+    encoder.to(DEVICE)
+    encoder.eval()
+
+    # Classifier MUST exist locally
     if not CLASSIFIER_PATH.exists():
         raise FileNotFoundError(f"Hybrid classifier file not found: {CLASSIFIER_PATH}")
 
-    tokenizer = AutoTokenizer.from_pretrained(str(MODEL_PATH), local_files_only=True)
-    encoder = AutoModel.from_pretrained(str(MODEL_PATH), local_files_only=True)
-    encoder.to(DEVICE)
-    encoder.eval()
     classifier = joblib.load(CLASSIFIER_PATH)
+
     return tokenizer, encoder, classifier
 
 
 tokenizer, encoder, classifier = load_models()
-print(f"Loaded MuRIL encoder from: {MODEL_PATH}")
-print(f"Loaded hybrid classifier from: {CLASSIFIER_PATH}")
+print("Model loading completed")
 print(f"Device: {DEVICE}")
 
 
