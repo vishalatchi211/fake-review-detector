@@ -1,40 +1,28 @@
-# Tanglish Fake Review Detection
+# Slang-Aware Fake Review Detection
 
-This project builds a stronger fake-review detector for Tanglish (`Tamil + English`) reviews using a hybrid approach:
+This project detects fake product reviews, especially in **Tanglish (Tamil + English)**.
 
-- word TF-IDF
-- character TF-IDF
-- handcrafted deception cues
-- optional transformer upgrade (`MuRIL` or `XLM-R`)
+## Features
 
-## Files
+* Uses MuRIL transformer for multilingual understanding
+* Detects slang and over-exaggeration
+* Hybrid model combining NLP + behavioral features
 
-- `tanglish_2000_reviews.csv`: main Tanglish dataset
-- `fake reviews dataset.csv`: auxiliary English dataset
-- `train_hybrid.py`: hybrid baseline trainer
-- `requirements.txt`: Python dependencies
-- `PROJECT_GUIDE.md`: project explanation and modeling strategy
+## Tech Stack
 
-## Run order
+* Python
+* Transformers (MuRIL)
+* Flask
+* Scikit-learn
 
-1. Install Python 3.11 or newer
-2. Create a virtual environment
-3. Install dependencies
-4. Place both CSV files in this folder
-5. Run the baseline:
+## How to Run
 
-```powershell
-py -3 -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+```bash
 pip install -r requirements.txt
-python train_hybrid.py
+python app.py
 ```
 
-## Next upgrade
+## Note
 
-After the hybrid baseline works:
-
-- extract transformer embeddings from `google/muril-base-cased` or `xlm-roberta-base`
-- combine them with the hybrid features
-- compare with the baseline using macro F1
+Due to GitHub file size limitations, trained model files are not uploaded.
+The system works locally with trained models.
